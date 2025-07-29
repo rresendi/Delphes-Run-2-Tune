@@ -18,6 +18,7 @@ def main():
     lead_etas, sub_etas, gen_etas = [], [], []
     lead_phis, sub_phis, gen_phis = [], [], []
     track_eff_den_pts, track_eff_num_pts = [], []
+    muon_chamber_eff_den_pts, muon_chamber_eff_num_pts = [], []
     masses = []
 
     # Initialize counts
@@ -184,7 +185,37 @@ def main():
 
                 if best_match is not None:
                     n_matched += 1
+                    
+                    # Append pT value to the numerator
                     track_eff_num_pts.append(gpt)
+
+                    # Create denominator collection for chamber efficiency
+                    pf_matched = pf_candidates[best_match]
+                    muon_chamber_eff_den_pts.append(pf_matched["pt"])
+
+                    # Match PF tracks to fully reconstructed muons
+                    matched_to_reco = False
+                    for i_mu in range(ev.nMuon):
+                        if abs(ev.Muon_pdgId[i_mu]) != 13:
+                            continue
+                        
+                        reco_eta = ev.Muon_eta[i_mu]
+                        reco_phi = ev.Muon_phi[i_mu]
+                        reco_pt = ev.Muon_pt[i_mu]
+
+                        dR = deltaR(pf_matched["eta"], pf_matched["phi"], reco_eta, reco_phi)
+                        if dR >= 0.1:
+                            continue
+                        
+                        dPtRel = abs(pf_matched["pt"] - reco_pt) / pf_matched["pt"]
+                        if dPtRel >= 0.3:
+                            continue
+
+                        matched_to_reco = True
+                        break
+                    
+                    if matched_to_reco:
+                        muon_chamber_eff_num_pts.append(pf_matched["pt"])
 
                     # Remove PF candidate once it's been matched
                     pf_candidates.pop(best_match)
@@ -277,6 +308,28 @@ def main():
     plt.ylim(0, 1.1)
     plt.tight_layout()
     plt.savefig("tracking_efficiency_vs_pt.png")
+    plt.close()
+
+    # Chamber efficiency
+    bins = np.linspace(0, 325, 25)
+    bin_centers = 0.5 * (bins[1:] + bins[:-1])
+    denom, _ = np.histogram(muon_chamber_eff_den_pts, bins=bins)
+    num, _ = np.histogram(muon_chamber_eff_num_pts, bins=bins)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        efficiency = np.true_divide(num, denom)
+        efficiency[denom == 0] = np.nan
+        cmap = plt.get_cmap("tab10")
+    plt.figure(figsize=(8, 8))
+    hep.cms.label(data = True, label="Preliminary", year = 2018)
+    plt.plot(bin_centers, efficiency, marker='o', linestyle='-', color='darkgreen')
+    err = np.sqrt(efficiency * (1 - efficiency) / denom)
+    err[denom == 0] = 0
+    plt.errorbar(bin_centers, efficiency, yerr=err, fmt='o', color='blue')
+    plt.xlabel(r"$p_T^{\mu}\,\mathrm{[GeV]}$")
+    plt.ylabel("Muon Chamber Efficiency")
+    plt.ylim(0, 1.1)
+    plt.tight_layout()
+    plt.savefig("chamber_efficiency_vs_pt.png")
     plt.close()
 
     print("Saved all plots.")
