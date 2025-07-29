@@ -109,9 +109,9 @@ def main():
                     p4_2 = ROOT.TLorentzVector()
                     p4_2.SetPtEtaPhiM(mu2["pt"], mu2["eta"], mu2["phi"], mu2["mass"])
 
-                    # Event level selection that only takes pairs on the j/psi resonance
+                    # Event level selection that only takes pairs on the Z peak (DY-onshell testing)
                     inv_mass = (p4_1 + p4_2).M()
-                    if inv_mass < 2.9 or inv_mass > 3.3:
+                    if inv_mass < 60 or inv_mass > 120:
                         continue
 
                     # Appending to lists for plotting
