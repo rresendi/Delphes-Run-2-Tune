@@ -1,321 +1,489 @@
-import uproot
 import ROOT
-import awkward as ak
-import sys
+import os
+import matplotlib.pyplot as plt
 import numpy as np
-import argparse
-import array
+import mplhep as hep
+from array import array
+import sys
 
-# Initialize argparse
-parser = argparse.ArgumentParser()
-parser.add_argument("--obj", choices=["electron", "muon", "pion"])
-parser.add_argument("--sample", choices=["onshell", "offshell", "piguns"])
-args = parser.parse_args()
+def main():
+    input_dir = "/eos/user/r/rresendi/DYtest/"
+    inputFiles = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.endswith(".root")]
 
-obj = args.obj
-sample = args.sample
+    inF = 0
+    iEv = 0
+    nF = len(inputFiles)
 
-# Open the ROOT file
-file = uproot.open("root_file.root")
-events = file["Events"]
+    # Object system argument
+    obj = sys.argv[1]
 
-# Define object groups at gen, PF, and reco level
-gen = events.arrays(["GenPart_pt", "GenPart_eta", "GenPart_phi", "GenPart_pdgId"])
+    # Output lists
+    lead_pts, sub_pts, gen_pts = [], [], []
+    lead_etas, sub_etas, gen_etas = [], [], []
+    lead_phis, sub_phis, gen_phis = [], [], []
+    masses = []
+    calo_eff_den_pts, calo_eff_den_etas, calo_eff_num_pts, calo_eff_num_etas = [], [], [], []
+    track_eff_den_etas, track_eff_den_pts, track_eff_num_pts, track_eff_num_etas = [], [], [], []
 
-# ******* don't know the semantics to access pfcand info so this is a placeholder for now *******
-pf = events.arrays(["PFCands_eta", "PFCands_phi", "PFCands_charge", "PFCands_pt"])
+    # Initialize counts
+    n_matched = 0
 
-# DeltaR function
-def deltaR(eta1, phi1, eta2, phi2):
-  dphi = phi1 - phi2
-  dphi = (dphi + np.pi) % (2 * np.pi) - np.pi
-  deta = eta1 - eta2
-  deltaR = np.sqrt(deta ** 2 + dphi **2)
-  return deltaR
+    # Create 2D histograms for numerator and denominator of tracker efficiency
+    if obj == "muon":
 
-# Invariant mass function
-def invariant_mass(pt1, eta1, phi1, pt2, eta2, phi2):
-    # Four momentum components
-    px1 = pt1 * np.cos(phi1)
-    py1 = pt1 * np.sin(phi1)
-    pz1 = pt1 * np.sinh(eta1)
-    e1 = pt1 * np.cosh(eta1)
+        # Set up 2D histograms with binning used in current nominal Delphes card
+        track_eta_edges = array('d', [0, 1.5, 2.5, 3.0])
+        track_pt_edges = array('d', [0, 0.1, 1.0, 1000, 2000])
 
-    px2 = pt2 * np.cos(phi2)
-    py2 = pt2 * np.sin(phi2)
-    pz2 = pt2 * np.sinh(eta2)
-    e2 = pt2 * np.cosh(eta2)
+        calo_eta_edges = array('d', [0, 1.5, 2.4, 3.0])
+        calo_pt_edges = array('d', [0, 10, 2000])
 
-    # Sum four vectors
-    e = e1 + e2
-    px = px1 + px2
-    py = py1 + py2
-    pz = pz1 + pz2
+        hTrackEffNum = ROOT.TH2F("hTrackEffNum", "Tracker Efficiency Numerator;|#eta|;p_{T} [GeV]",
+                                len(track_eta_edges)-1, track_eta_edges,
+                                len(track_pt_edges)-1, track_pt_edges)
+        hTrackEffDen = ROOT.TH2F("hTrackEffDen", "Tracker Efficiency Denominator;|#eta|;p_{T} [GeV]",
+                                len(track_eta_edges)-1, track_eta_edges,
+                                len(track_pt_edges)-1, track_pt_edges)
 
-    return np.sqrt(e**2 - px**2 - py**2 - pz**2)
+        # Create 2D histograms for numerator and denominator of calorimeter (chamber) efficiency
+        hCaloEffNum = ROOT.TH2F("hCaloEffNum", "Calorimeter Efficiency Numerator;|#eta|;p_{T} [GeV]",
+                            len(calo_eta_edges)-1, calo_eta_edges,
+                            len(calo_pt_edges)-1, calo_pt_edges)
+        hCaloEffDen = ROOT.TH2F("hCaloEffDen", "Calorimeter Efficiency Denominator;|#eta|;p_{T} [GeV]",
+                            len(calo_eta_edges)-1, calo_eta_edges,
+                            len(calo_pt_edges)-1, calo_pt_edges)
 
-# Select charged PF candidates
-is_charged_pf = (pf["PFCands_charge"] != 0)
-pf_eta = pf["PFCands_eta"][is_charged_pf]
-pf_phi = pf["PFCands_phi"][is_charged_pf]
-pf_pt = pf["PFCands_pt"][is_charged_pf]
+    elif obj == "electron":
 
-if obj == "electron":
-  # Select gen level electrons
-  is_gen = (abs(gen["GenPart_pdgId"]) == 11)
+        # Set up 2D histograms with binning used in current nominal Delphes card
+        track_eta_edges = array('d', [0, 1.5, 2.5, 3.0])
+        track_pt_edges = array('d', [0, 0.1, 1.0, 100, 2000])
 
-  # Select reco level electrons
-  reco = events.arrays(["Electron_eta", "Electron_phi", "Electron_pt"])
-  reco_eta = reco["Electron_eta"]
-  reco_phi = reco["Electron_phi"]
-  reco_pt = reco["Electron_pt"]
+        calo_eta_edges = array('d', [0, 1.5, 2.5, 3.0])
+        calo_pt_edges = array('d', [0, 10, 2000])
 
-elif obj == "pion":
-  # Select gen level pions
-  is_gen = (abs(gen["GenPart_pdgId"]) == 211)
+        hTrackEffNum = ROOT.TH2F("hTrackEffNum", "Tracker Efficiency Numerator;|#eta|;p_{T} [GeV]",
+                                len(track_eta_edges)-1, track_eta_edges,
+                                len(track_pt_edges)-1, track_pt_edges)
+        hTrackEffDen = ROOT.TH2F("hTrackEffDen", "Tracker Efficiency Denominator;|#eta|;p_{T} [GeV]",
+                                len(track_eta_edges)-1, track_eta_edges,
+                                len(track_pt_edges)-1, track_pt_edges)
 
-  # No reco level info needed
-  reco_eta = None
-  reco_phi = None
-  reco_pt = None
+        # Create 2D histograms for numerator and denominator of calorimeter (chamber) efficiency
+        hCaloEffNum = ROOT.TH2F("hCaloEffNum", "Calorimeter Efficiency Numerator;|#eta|;p_{T} [GeV]",
+                            len(calo_eta_edges)-1, calo_eta_edges,
+                            len(calo_pt_edges)-1, calo_pt_edges)
+        hCaloEffDen = ROOT.TH2F("hCaloEffDen", "Calorimeter Efficiency Denominator;|#eta|;p_{T} [GeV]",
+                            len(calo_eta_edges)-1, calo_eta_edges,
+                            len(calo_pt_edges)-1, calo_pt_edges)
 
-  # Check for at least one jet in the event
-  jets = events.arrays(["Jet_pt"])
-  if ak.count(jets["Jet_pt"], axis=1).max() <= 1:
-      print("No events with >1 jet found.")
-      sys.exit(0)
-  multi_jet_mask = ak.count(jets["Jet_pt"], axis=1) > 1
 
-elif obj == "muon":
-  # Select gen level muons
-  is_gen = (abs(gen["GenPart_pdgId"]) == 13)
+    # DeltaR helper function
+    def deltaR(eta1, phi1, eta2, phi2):
+        dphi = np.abs(phi1 - phi2)
+        if dphi > np.pi:
+            dphi = 2*np.pi - dphi
+        deta = eta1 - eta2
+        return np.sqrt(deta**2 + dphi**2)
 
-  # Select reco level electrons
-  reco = events.arrays(["Muon_eta", "Muon_phi", "Muon_pt"])
-  reco_eta = reco["Muon_eta"]
-  reco_phi = reco["Muon_phi"]
-  reco_pt = reco["Muon_pt"]
+    # Start looping through files in the directory
+    for i, iFile in enumerate(inputFiles):
+        inF += 1
+        # print(f"Processing file {inF}/{nF}: {iFile}")
 
-# Skip events with no gen particles
-gen_pt = gen["GenPart_pt"][is_gen]
-if ak.count(gen_pt) == 0:
-    print("Skipping event. No matching gen particles found.")
-    sys.exit(0)
+        # Open and read the ROOT file
+        tf = ROOT.TFile.Open(iFile, "READ")
+        if not tf or tf.IsZombie():
+            print(f"Error opening file {iFile}. Skipping.")
+            continue
 
-# Apply gen particle and eta selection
-gen_eta = gen["GenPart_eta"][is_gen]
-gen_phi = gen["GenPart_phi"][is_gen]
-gen_id = gen["GenPart_pdgId"][is_gen]
-eta_mask = abs(gen_eta) < 2.4
-gen_eta = gen_eta[eta_mask]
-gen_phi = gen_phi[eta_mask]
-gen_pt = gen_pt[eta_mask]
-gen_id = gen_id[eta_mask]
+        events = tf.Get("Events")
+        if not events:
+            print(f"No 'Events' tree found in {iFile}. Skipping.")
+            tf.Close()
+            continue
 
-# Apply nJets > 1 selection for pions
-if obj == "pion":
-    gen_eta = gen_eta[multi_jet_mask]
-    gen_phi = gen_phi[multi_jet_mask]
-    gen_pt = gen_pt[multi_jet_mask]
+        # Initialize numerator and denominator for the tracking efficiency
+        n_gen_total = 0
+        n_matched_total = 0
+        iEv = 0
+        
+        # Start looping through the events in a given file
+        for ev in events:
 
-# Apply OSSF and onshell selections for leptons
-if obj in ["electron", "muon"] and sample in ["onshell", "offshell"]:
-  # Create all possible gen-gen lepton pairs
-  gen_leptons = ak.zip({
-      "eta": gen_eta,
-      "phi": gen_phi,
-      "pt": gen_pt,
-      "pdgId": gen_id
-  })
+            # For quick testing
+            iEv += 1
+            # if(iEv % 100 == 0):
+            #     break
 
-  gen_pairs = ak.cartesian([gen_leptons, gen_leptons], nested=True)
-  lep1 = gen_pairs["0"]
-  lep2 = gen_pairs["1"]
+            # Initialize tracking efficiency denominator
+            track_eff_denominator_objs = set()
 
-  # Apply OSSF condition using pdgId
-  is_ossf = (lep1.pdgId + lep2.pdgId == 0)
+            # Initialize n_matched for each event
+            n_matched = 0
 
-  # Avoid self-pairing
-  not_same = lep1.pt != lep2.pt
+            # Extract relevant branches
+            nGenPart = ev.nGenPart
+            pdgIds = ev.GenPart_pdgId
+            pts = ev.GenPart_pt
+            etas = ev.GenPart_eta
+            phis = ev.GenPart_phi
+            status = ev.GenPart_status
+            masses_branch = ev.GenPart_mass
 
-  # Compute invariant mass for all pairs
-  mass = invariant_mass(lep1.pt, lep1.eta, lep1.phi, lep2.pt, lep2.eta, lep2.phi)
+            # Create gen muon collection
+            gen_objs = []
+            if obj == "muon":
+                for i in range(nGenPart):
+                    # Apply object-level selections
+                    if abs(pdgIds[i]) == 13 and abs(etas[i]) < 2.4 and status[i] == 1:
+                        gen_objs.append({
+                            "pt": pts[i],
+                            "eta": etas[i],
+                            "phi": phis[i],
+                            "mass": masses_branch[i],
+                            "pdgId": pdgIds[i],
+                            "index": i
+                        })
 
-  # Apply mass window
-  if sample == "onshell":
-      mass_cut = (mass > 81) & (mass < 120)
-  elif sample == "offshell":
-      mass_cut = (mass > 2) & (mass < 20)
-  else:
-      mass_cut = ak.ones_like(mass, dtype=bool)  # No cut for piguns or other samples
+            elif obj == "electron":
+                for i in range(nGenPart):
+                    # Apply object-level selections
+                    if abs(pdgIds[i]) == 11 and abs(etas[i]) < 2.4 and status[i] == 1:
+                        gen_objs.append({
+                            "pt": pts[i],
+                            "eta": etas[i],
+                            "phi": phis[i],
+                            "mass": masses_branch[i],
+                            "pdgId": pdgIds[i],
+                            "index": i
+                        })
 
-  # Combine masks
-  valid_pairs = is_ossf & not_same & mass_cut
+            # Sort by pt
+            gen_objs = sorted(gen_objs, key=lambda x: x["pt"], reverse=True)
 
-  # Find events that contain at least one valid OSSF pair
-  ossf_mask = ak.any(valid_pairs, axis=1)
+            # Create gen muon list once per event
+            for gm in gen_objs:
+                gen_pts.append(gm["pt"])
+                gen_etas.append(gm["eta"])
+                gen_phis.append(gm["phi"])
 
-  # Apply the mask to gen leptons and everything else downstream
-  gen_eta = gen_eta[ossf_mask]
-  gen_phi = gen_phi[ossf_mask]
-  gen_pt  = gen_pt[ossf_mask]
-  pf_eta  = pf_eta[ossf_mask]
-  pf_phi  = pf_phi[ossf_mask]
-  pf_pt   = pf_pt[ossf_mask]
+            if len(gen_objs) < 2:
+                continue
 
-# Set up efficiency histograms
-ROOT.gROOT.SetBatch(True)
+            # Initialize PF Candidate list
+            pf_candidates = []
 
-# Variable pT binning
-pt_bins = np.array([
-0, 2, 4, 6, 8, 10, 12,
-14, 16, 18, 20, 22,
-24, 26, 28, 30, 32,
-34, 36, 38, 40, 50,
-60, 70, 80, 90, 100,
-120, 140, 160, 180, 200
-], dtype = float)
+            # Loop through subleading leptons to create OSSF pairs
+            gen_objs_for_eff = set()
+            for i, obj1 in enumerate(gen_objs):
+                # Do the OSSF check
+                for obj2 in gen_objs[i+1:]:
+                    if obj1["pdgId"] * obj2["pdgId"] >= 0:
+                        continue
 
-# Create efficiency histograms
-track_eff_histo = ROOT.TEfficiency("track_eff_histo", f"Track Efficiency;Gen pT [GeV];Efficiency", len(pt_bins)-1, pt_bins)
-calo_eff_histo = ROOT.TEfficiency("calo_eff_histo", f"Calo/Chamber Efficiency;Gen pT [GeV];Efficiency", len(pt_bins)-1, pt_bins)
+                    # Calculate dilepton invariant mass only using OSSF pairs
+                    p4_1 = ROOT.TLorentzVector()
+                    p4_1.SetPtEtaPhiM(obj1["pt"], obj1["eta"], obj1["phi"], obj1["mass"])
+                    p4_2 = ROOT.TLorentzVector()
+                    p4_2.SetPtEtaPhiM(obj2["pt"], obj2["eta"], obj2["phi"], obj2["mass"])
 
-# Eta-binned for electrons only
-if obj == "electron":
-    eta_bins = [(0.0, 0.8), (0.8, 1.44), (1.57, 2.4)]
+                    # Event level selection that only takes pairs on the j/psi resonance
+                    inv_mass = (p4_1 + p4_2).M()
+                    if inv_mass < 60 or inv_mass > 120:
+                        continue
 
-    track_eta_eff_histos = []
-    calo_eta_eff_histos = []
+                    # Appending to lists for plotting
+                    masses.append(inv_mass)
+                    lead_pts.append(obj1["pt"])
+                    lead_etas.append(obj1["eta"])
+                    lead_phis.append(obj1["phi"])
+                    sub_pts.append(obj2["pt"])
+                    sub_etas.append(obj2["eta"])
+                    sub_phis.append(obj2["phi"])
 
-    for i, (eta_min, eta_max) in enumerate(eta_bins):
-        track_hist = ROOT.TEfficiency(
-            f"track_eff_eta_bin_{i}",
-            f"Track Efficiency;Gen pT [GeV];Efficiency;Eta [{eta_min}, {eta_max}]",
-            len(pt_bins) - 1, pt_bins
-        )
-        calo_hist = ROOT.TEfficiency(
-            f"calo_eff_eta_bin_{i}",
-            f"Calo/Chamber Efficiency;Gen pT [GeV];Efficiency;Eta [{eta_min}, {eta_max}]",
-            len(pt_bins) - 1, pt_bins
-        )
-        track_eta_eff_histos.append(track_hist)
-        calo_eta_eff_histos.append(calo_hist)
+                    # Adding muons to the OSSF gen-muons set
+                    gen_objs_for_eff.add(obj1["index"])
+                    gen_objs_for_eff.add(obj2["index"])
 
-# Create gen and PF eta/phi object pairs
-gen_objs = ak.zip({"eta": gen_eta, "phi": gen_phi, "pt": gen_pt})
-pf_objs = ak.zip({"eta": pf_eta, "phi": pf_phi, "pt": pf_pt})
-gen_pf_pairs = ak.cartesian([gen_objs, pf_objs], nested=True)
+            # Build gen-level muon kinematic lists
+            track_eff_denominator_objs = gen_objs_for_eff
+            track_eff_denominator_pts = [pts[i] for i in track_eff_denominator_objs]
+            track_eff_denominator_etas = [etas[i] for i in track_eff_denominator_objs]
+            track_eff_denominator_phis = [phis[i] for i in track_eff_denominator_objs]
 
-# Calculate deltaR for these pairs
-gen_pf_dR = deltaR(
-gen_pf_pairs["0"].eta, gen_pf_pairs["0"].phi,
-gen_pf_pairs["1"].eta, gen_pf_pairs["1"].phi,
-)
+            # Store tracking efficiency denominator
+            track_eff_den_pts.extend(track_eff_denominator_pts)
 
-# Use best match only
-best_pf_id = ak.argmin(gen_pf_dR, axis=1)
-best_pf_dR = ak.firsts(ak.sort(gen_pf_dR, axis=1))
+            # Initialize a list of PF candidates
+            if obj == "muon":
+                for i in range(ev.nPFCands):
+                    if abs(ev.PFCands_pdgId[i]) == 13:
+                        pf_candidates.append({
+                        "index": i,
+                        "pt": ev.PFCands_pt[i],
+                        "eta": ev.PFCands_eta[i],
+                        "phi": ev.PFCands_phi[i]
+                        })
 
-# Apply matching conditions
-gen_pf_dr_match = best_pf_dR < 0.1
-pt_ratio = pf_objs.pt[best_pf_id] / gen_pt
-pt_match = (pt_ratio > 0.7) & (pt_ratio < 1.3)
+            elif obj == "electron":
+                for i in range(ev.nPFCands):
+                    if abs(ev.PFCands_pdgId[i]) == 11:
+                        pf_candidates.append({
+                        "index": i,
+                        "pt": ev.PFCands_pt[i],
+                        "eta": ev.PFCands_eta[i],
+                        "phi": ev.PFCands_phi[i]
+                        })
 
-gen_pf_match = gen_pf_dr_match & pt_match
+            # Loop over all gen muons and try to match to a PF candidate
+            for ig, (gpt, geta, gphi) in enumerate(zip(track_eff_denominator_pts, track_eff_denominator_etas, track_eff_denominator_phis)):
 
-# Calculate efficiency at the tracker level
-gen_matched_to_pf = ak.any(gen_pf_match, axis=1)
-pf_matched_mask = ak.any(gen_pf_match, axis=0)
+                best_match = None
 
-# Fill track efficiency histogram for muons and pions
-if obj not in ["electron"]:
-  for pt, matched in zip(ak.flatten(gen_pt), ak.flatten(gen_matched_to_pf)):
-    track_eff_histo.Fill(bool(matched), pt)
+                # Initialize best deltaR and PtRel to an unphysical value
+                best_dR = float("inf")
+                best_dPtRel = float("inf")
 
-# Fill eta-binned track efficiency histogram for electrons
-elif obj == "electron":
-    for i, (eta_min, eta_max) in enumerate(eta_bins):
-        eta_mask = (abs(gen_eta) >= eta_min) & (abs(gen_eta) < eta_max)
+                # Loop over unmatched PF candidates
+                for i_pf, pf in enumerate(pf_candidates):
 
-        # Track efficiency filling
-        gen_pt_bin = gen_pt[eta_mask]
-        matched_track_bin = gen_matched_to_pf[eta_mask]
+                    dR = deltaR(geta, gphi, pf["eta"], pf["phi"])
+                    if dR >= 0.1:
+                        continue
 
-        for pt, matched in zip(ak.flatten(gen_pt_bin), ak.flatten(matched_track_bin)):
-            track_eta_eff_histos[i].Fill(bool(matched), pt)
+                    dPtRel = abs(gpt - pf["pt"]) / gpt
+                    if dPtRel >= 0.3:
+                        continue
 
-# Calculate efficiency at the calorimeter/muon chamber level for leptons only
-if obj in ["electron", "muon"]:
+                    # Take PF Cand closest to the gen particle. If tied, take pf cand with closest pt
+                    if dR < best_dR or (dR == best_dR and dPtRel < best_dPtRel):
+                        best_match = i_pf
+                        best_dR = dR
+                        best_dPtRel = dPtRel
 
-  # Find PFs matched to Gen
-  pf_matched = ak.any(gen_pf_match, axis=0)
-  matched_pf_eta = pf_eta[pf_matched]
-  matched_pf_phi = pf_phi[pf_matched]
-  matched_pf_pt = pf_pt[pf_matched]
+                if best_match is not None:
+                    n_matched += 1
+                    
+                    # Append pT value to the numerator
+                    track_eff_num_pts.append(gpt)
+                    track_eff_num_etas.append(geta)
 
-  # Create PF and reco eta/phi object pairs
-  matched_pf_for_reco = ak.zip({"eta": matched_pf_eta, "phi": matched_pf_phi, "pt": matched_pf_pt})
-  reco = ak.zip({"eta": reco_eta, "phi": reco_phi, "pt": reco_pt})
+                    # Create denominator collection for chamber efficiency
+                    pf_matched = pf_candidates[best_match]
+                    calo_eff_den_pts.append(pf_matched["pt"])
+                    calo_eff_den_etas.append(pf_matched["eta"])
 
-  # Build PF–Reco candidate pairs
-  pf_reco_pairs = ak.cartesian([matched_pf_for_reco, reco], nested=True)
+                    # Match PF tracks to fully reconstructed muons
+                    matched_to_reco = False
+                    if obj == "muon":
+                        for i_mu in range(ev.nMuon):
+                            if abs(ev.Muon_pdgId[i_mu]) != 13:
+                                continue
+                            
+                            reco_eta = ev.Muon_eta[i_mu]
+                            reco_phi = ev.Muon_phi[i_mu]
+                            reco_pt = ev.Muon_pt[i_mu]
 
-  # Calculate deltaR of these pairs
-  pf_reco_dR = deltaR(
-      pf_reco_pairs["0"].eta, pf_reco_pairs["0"].phi,
-      pf_reco_pairs["1"].eta, pf_reco_pairs["1"].phi,
-  )
+                            dR = deltaR(pf_matched["eta"], pf_matched["phi"], reco_eta, reco_phi)
+                            if dR >= 0.1:
+                                continue
+                            
+                            dPtRel = abs(pf_matched["pt"] - reco_pt) / pf_matched["pt"]
+                            if dPtRel >= 0.3:
+                                continue
 
-  # Get best PF match index per gen
-  best_pf_id = ak.argmin(gen_pf_dR, axis=1)
-  matched_mask = gen_pf_match
+                            matched_to_reco = True
+                            break
 
-  # Only keep gen leptons that were matched
-  gen_matched_mask = ak.any(matched_mask, axis=1)
-  matched_pf_id = best_pf_id[gen_matched_mask]
+                    elif obj == "electron":
+                        for i_ele in range(ev.nElectron):
+                            if abs(ev.Electron_pdgId[i_ele]) != 11:
+                                continue
+                            
+                            reco_eta = ev.Electron_eta[i_ele]
+                            reco_phi = ev.Electron_phi[i_ele]
+                            reco_pt = ev.Electron_pt[i_ele]
 
-  # Get PF kinematics from matched PFs
-  matched_pf_eta = pf_eta[matched_pf_id]
-  matched_pf_phi = pf_phi[matched_pf_id]
-  matched_pf_pt = pf_pt[matched_pf_id]
+                            dR = deltaR(pf_matched["eta"], pf_matched["phi"], reco_eta, reco_phi)
+                            if dR >= 0.1:
+                                continue
+                            
+                            dPtRel = abs(pf_matched["pt"] - reco_pt) / pf_matched["pt"]
+                            if dPtRel >= 0.3:
+                                continue
 
-  # Rebuild the PF objects to match Reco
-  matched_pf_for_reco = ak.zip({"eta": matched_pf_eta, "phi": matched_pf_phi, "pt": matched_pf_pt})
-  reco = ak.zip({"eta": reco_eta, "phi": reco_phi, "pt": reco_pt})
+                            matched_to_reco = True
+                            break
+                    
+                    if matched_to_reco:
+                        calo_eff_num_pts.append(pf_matched["pt"])
+                        calo_eff_num_etas.append(pf_matched["eta"])
 
-  pf_reco_dr_match = pf_reco_dR < 0.1
-  pt_ratio = pf_reco_pairs["1"].pt / pf_reco_pairs["0"].pt
-  pt_match = (pt_ratio > 0.7) & (pt_ratio < 1.3)
-  pf_reco_match = pf_reco_dr_match & pt_match
 
-  # Calculate Muon Chamber efficiency
-  pf_matched_to_reco = ak.any(pf_reco_match, axis=1)
-  matched_gen_pt = gen_pt[gen_matched_mask]
-  if obj not in ["electron"]:
-    for pt, matched in zip(ak.flatten(matched_gen_pt), ak.flatten(pf_matched_to_reco)):
-        calo_eff_histo.Fill(bool(matched), pt)
+                    # Remove PF candidate once it's been matched
+                    pf_candidates.pop(best_match)
 
-  # Calculate eta-binned ECAL efficiency
-  if obj == "electron":
-    matched_gen_eta = gen_eta[gen_matched_mask]
+            # Fill tracking efficiency denominator: number of all gen muons passing object and event level selections
+            n_gen = len(track_eff_denominator_objs)
+            n_gen_total += n_gen
 
-    for i, (eta_min, eta_max) in enumerate(eta_bins):
-        eta_mask = (abs(matched_gen_eta) >= eta_min) & (abs(matched_gen_eta) < eta_max)
+            # Fill tracking efficiency numerator: number of all gen muons passing object and event level selections matched to a PF track
+            n_matched_total += n_matched
 
-        matched_gen_pt_bin = matched_gen_pt[eta_mask]
-        matched_calo_bin = pf_matched_to_reco[eta_mask]
+            # Fill 2D track histogram denominator
+            for eta, pt in zip(track_eff_denominator_etas, track_eff_denominator_pts):
+                hTrackEffDen.Fill(abs(eta), pt)
 
-        for pt, matched in zip(ak.flatten(matched_gen_pt_bin), ak.flatten(matched_calo_bin)):
-            calo_eta_eff_histos[i].Fill(bool(matched), pt)
-  
-outfile = ROOT.TFile(f"{obj}_{sample}_track_eff.root", "RECREATE")
-track_eff_histo.Write()
-calo_eff_histo.Write()
-if obj == "electron":
-    for hist in track_eta_eff_histos:
-        hist.Write()
-    for hist in calo_eta_eff_histos:
-        hist.Write()
-outfile.Close()
+            # Fill 2D track histogram numerator
+            for eta, pt in zip(track_eff_num_etas, track_eff_num_pts):
+                hTrackEffNum.Fill(abs(eta), pt)
 
-print(f"Efficiencies for {obj} in {sample} written to {obj}_{sample}_track_eff.root")
+            # Fill 2D calo efficiency denominator
+            for eta, pt in zip(calo_eff_den_etas, calo_eff_den_pts):
+                hCaloEffDen.Fill(abs(eta), pt)
+
+            # Fill 2D calo efficiency numerator
+            for eta, pt in zip(calo_eff_num_etas, calo_eff_num_pts):
+                hCaloEffNum.Fill(abs(eta), pt)
+
+        # Write efficiencies out per file
+        track_efficiency = n_matched_total / n_gen_total if n_gen_total > 0 else 0
+        print(f"Gen muons (OSSF): {n_gen_total}")
+        print(f"Matched PF muons: {n_matched_total}")
+        print(f"Track efficiency: {track_efficiency:.4f}")
+        tf.Close()
+
+    print(f"Finished processing {inF} files with {iEv} events.")
+    print(f"Total OSSF pairs found: {len(masses)}")
+
+    # Write out 2D histograms to ROOT file
+    if obj == "muon":
+        fout = ROOT.TFile("muon_2D_efficiency_histograms.root", "RECREATE")
+
+    elif obj == "electron":
+        fout = ROOT.TFile("electron_2D_efficiency_histograms.root", "RECREATE")
+    hTrackEffNum.Write()
+    hTrackEffDen.Write()
+    hCaloEffNum.Write()
+    hCaloEffDen.Write()
+    fout.Close()
+
+    # Plotting
+    cmap = plt.get_cmap("tab10")
+    hep.style.use("CMS")
+
+    # Dilepton mass
+    plt.figure(figsize=(8, 8))
+    hep.cms.label(data = True, label="Preliminary", year = 2018)
+    plt.hist(masses, bins=50, range=(0, 150), histtype='step', color=cmap(0), linewidth=2)
+    if obj == "muon":
+        plt.xlabel(r"$m_{\mu\mu}\,\mathrm{[GeV]}$")
+    elif obj == "electron":
+        plt.xlabel(r"$m_{ee}\,\mathrm{[GeV]}$")
+    plt.ylabel("Counts")
+    plt.tight_layout()
+    plt.savefig(f"{obj}_dilepton_mass.png")
+    plt.close()
+
+    # pT
+    plt.figure(figsize=(8, 8))
+    hep.cms.label(data = True, label="Preliminary", year = 2018)
+    plt.hist(lead_pts, bins=20, range=(0, 200), histtype='step', label="Leading", color=cmap(0), linewidth=2)
+    plt.hist(sub_pts, bins=20, range=(0, 200), histtype='step', label="Subleading", color=cmap(2), linewidth=2)
+    if obj == "muon":
+        plt.xlabel(r"$p_T^{\mu}\,\mathrm{[GeV]}$")
+    elif obj == "electron":
+        plt.xlabel(r"$p_T^{e}\,\mathrm{[GeV]}$")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{obj}_pt.png")
+    plt.close()
+
+    # Eta
+    plt.figure(figsize=(8, 8))
+    hep.cms.label(data = True, label="Preliminary", year = 2018)
+    plt.hist(lead_etas, bins=20, range=(-3, 3), histtype='step', label="Leading", color=cmap(0), linewidth=2)
+    plt.hist(sub_etas, bins=20, range=(-3, 3), histtype='step', label="Subleading", color=cmap(2), linewidth=2)
+    if obj == "muon":
+        plt.xlabel(r"$\eta^{\mu}$")
+    elif obj == "electron":
+        plt.xlabel(r"$\eta^{e}$")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{obj}_eta.png")
+    plt.close()
+
+    # Phi
+    plt.figure(figsize=(8, 8))
+    hep.cms.label(data = True, label="Preliminary", year = 2018)
+    plt.hist(lead_phis, bins=20, range=(-np.pi, np.pi), histtype='step', label="Leading", color=cmap(0), linewidth=2)
+    plt.hist(sub_phis, bins=20, range=(-np.pi, np.pi), histtype='step', label="Subleading", color=cmap(2), linewidth=2)
+    if obj == "muon":
+        plt.xlabel(r"$\phi^{\mu}$")
+    elif obj == "electron":
+        plt.xlabel(r"$\phi^{e}$")
+    plt.ylabel("Counts")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"{obj}_phi.png")
+    plt.close()
+
+    # Track efficiency
+    bins = np.linspace(0, 325, 25)
+    bin_centers = 0.5 * (bins[1:] + bins[:-1])
+    denom, _ = np.histogram(track_eff_den_pts, bins=bins)
+    num, _ = np.histogram(track_eff_num_pts, bins=bins)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        track_efficiency = np.true_divide(num, denom)
+        track_efficiency[denom == 0] = np.nan
+        cmap = plt.get_cmap("tab10")
+    plt.figure(figsize=(8, 8))
+    hep.cms.label(data = True, label="Preliminary", year = 2018)
+    plt.plot(bin_centers, track_efficiency, marker='o', linestyle='-', color='darkgreen')
+    err = np.sqrt(track_efficiency * (1 - track_efficiency) / denom)
+    err[denom == 0] = 0
+    plt.errorbar(bin_centers, track_efficiency, yerr=err, fmt='o', color='blue')
+    if obj == "muon":
+        plt.xlabel(r"$p_T^{\mu}\,\mathrm{[GeV]}$")
+    elif obj == "electron":
+        plt.xlabel(r"$p_T^{e}\,\mathrm{[GeV]}$")
+    plt.ylabel("Tracking Efficiency")
+    plt.ylim(0, 1.1)
+    plt.tight_layout()
+    plt.savefig(f"{obj}_tracking_efficiency_vs_pt.png")
+    plt.close()
+
+    # Chamber efficiency
+    bins = np.linspace(0, 325, 25)
+    bin_centers = 0.5 * (bins[1:] + bins[:-1])
+    denom, _ = np.histogram(calo_eff_den_pts, bins=bins)
+    num, _ = np.histogram(calo_eff_num_pts, bins=bins)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        calo_efficiency = np.true_divide(num, denom)
+        calo_efficiency[denom == 0] = np.nan
+        cmap = plt.get_cmap("tab10")
+    plt.figure(figsize=(8, 8))
+    hep.cms.label(data = True, label="Preliminary", year = 2018)
+    plt.plot(bin_centers, calo_efficiency, marker='o', linestyle='-', color='darkgreen')
+    err = np.sqrt(calo_efficiency * (1 - calo_efficiency) / denom)
+    err[denom == 0] = 0
+    plt.errorbar(bin_centers, calo_efficiency, yerr=err, fmt='o', color='blue')
+    plt.ylim(0, 1.1)
+    plt.tight_layout()
+    if obj == "muon":
+        plt.xlabel(r"$p_T^{\mu}\,\mathrm{[GeV]}$")
+        plt.ylabel("Muon Chamber Efficiency")
+        plt.savefig("muon_chamber_efficiency_vs_pt.png")
+    elif obj == "electron":
+        plt.xlabel(r"$p_T^{e}\,\mathrm{[GeV]}$")
+        plt.ylabel("ECAL Efficiency")
+        plt.savefig("ECAL_efficiency_vs_pt.png")
+    plt.close()
+
+    print("Saved all plots.")
+
+if __name__ == "__main__":
+    main()
