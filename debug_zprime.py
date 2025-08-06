@@ -13,8 +13,8 @@ input_files = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.en
 def passes_lepton_cuts(ev, lepton, leptonIndex):
     if lepton == "Muon":
         return (
-            abs(ev.GenPart_pdgId[leptonIndex]) == 11
-            and abs(ev.GenPart_eta[leptonIndex]) < 2.4
+            abs(ev.Muon_pdgId[leptonIndex]) == 11
+            and abs(ev.Muon_eta[leptonIndex]) < 2.4
         )
     return False
 
@@ -44,14 +44,14 @@ with open(output_file, "w") as out:
 
         for i in range(n_events):
             events.GetEntry(i)
-            nGenPart = events.nGenPart
-            for idx in range(nGenPart):
-                if passes_lepton_cuts(events, lepton_type, idx):
-                    eta = events.GenPart_eta[idx]
-                    phi = events.GenPart_phi[idx]
-                    pt = events.GenPart_pt[idx]
-                    passing_leptons += 1
-                    out.write(f"{i:<7d} {idx:<10d} {eta:6.3f} {phi:6.3f} {pt:6.3f}\n")
+            nMuon = events.nMuon
+            for idx in range(nMuon):
+                # if passes_lepton_cuts(events, lepton_type, idx):
+                eta = events.Muon_eta[idx]
+                phi = events.Muon_phi[idx]
+                pt = events.Muon_pt[idx]
+                passing_leptons += 1
+                out.write(f"{i:<7d} {idx:<10d} {eta:6.3f} {phi:6.3f} {gen pt:6.3f}\n")
 
         file.Close()
 
