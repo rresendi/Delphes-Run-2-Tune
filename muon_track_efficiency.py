@@ -30,7 +30,7 @@ def pick_best_gen_pair(gen_objs, samp, resonance_mass):
     elif samp == "dy":
         mwin = (60.0, 120.0)
     else:  # zprime
-        mwin = (2300.0, 2700.0)
+        mwin = (4000.0, 6000.0)
 
     best_pair, best_delta = None, float("inf")
     for i, a in enumerate(gen_objs):
@@ -124,7 +124,7 @@ def main():
             ]
             for _ in range(len(eta_edges) - 1)
         ]
-        resonance_mass = 2500.0
+        resonance_mass = 4800.0
 
     n_eta = len(eta_edges) - 1
 
