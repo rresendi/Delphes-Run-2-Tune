@@ -3,6 +3,10 @@ using namespace MA5;
 using namespace std;
 #include <cstdlib>
 #include <tuple>
+#include <fstream>
+
+static std::ofstream momres_csv;
+static unsigned long long evt_counter = 0;
 
 template <typename T>
 T normalizePhi(T phi)
@@ -137,6 +141,9 @@ MAbool user::Initialize(const MA5::Configuration &cfg,
   Manager()->AddHisto("LeadMuonPHI", 20, -3.14, 3.14);
   Manager()->AddHisto("SubleadMuonPHI", 20, -3.14, 3.14);
 
+  momres_csv.open("momentum_resolution.csv");
+  momres_csv << "event,reco_pt,gen_pt,resolution\n";
+
   return true;
 }
 
@@ -223,6 +230,24 @@ bool user::Execute(SampleFormat &sample, const EventFormat &event)
     Manager()->FillHisto("SubleadMuonPHI", muons.at(1).phi());
   }
 
+  unsigned long long evt = evt_counter++;
+
+for (const auto& trk : event.rec()->tracks())
+{
+  if (trk.mc() == nullptr) continue;
+  double reco_pt = trk.pt();
+  double gen_pt  = trk.mc()->pt();
+  if (gen_pt <= 0) continue;
+
+  double res = (reco_pt - gen_pt) / gen_pt;
+
+  momres_csv
+    << evt << ","
+    << reco_pt << ","
+    << gen_pt << ","
+    << res << "\n";
+}
+
   return true;
 }
 
@@ -232,4 +257,5 @@ bool user::Execute(SampleFormat &sample, const EventFormat &event)
 ///////////////////////////////////////////////////////////////
 void user::Finalize(const SampleFormat &summary, const std::vector<SampleFormat> &files)
 {
+  momres_csv.close();
 }
