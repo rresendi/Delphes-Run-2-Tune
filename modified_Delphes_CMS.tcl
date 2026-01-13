@@ -10,7 +10,6 @@ set ExecutionPath {
 
   ChargedHadronMomentumSmearing
   ElectronMomentumSmearing
-  MuonMomentumSmearing
 
   TrackMerger
  
@@ -149,22 +148,6 @@ module MomentumSmearing ElectronMomentumSmearing {
   set ResolutionFormula {                  (abs(eta) <= 0.5) * (pt > 0.1) * sqrt(0.03^2 + pt^2*1.3e-3^2) +
                          (abs(eta) > 0.5 && abs(eta) <= 1.5) * (pt > 0.1) * sqrt(0.05^2 + pt^2*1.7e-3^2) +
                          (abs(eta) > 1.5 && abs(eta) <= 2.5) * (pt > 0.1) * sqrt(0.15^2 + pt^2*3.1e-3^2)}
-}
-
-###############################
-# Momentum resolution for muons
-###############################
-
-module MomentumSmearing MuonMomentumSmearing {
-  set InputArray ParticlePropagator/muons
-  set OutputArray muons
-
-  # set ResolutionFormula {resolution formula as a function of eta and pt}
-
-  # resolution formula for muons
-  set ResolutionFormula {                  (abs(eta) <= 0.5) * (pt > 0.1) * sqrt(0.01^2 + pt^2*1.0e-4^2) +
-                         (abs(eta) > 0.5 && abs(eta) <= 1.5) * (pt > 0.1) * sqrt(0.015^2 + pt^2*1.5e-4^2) +
-                         (abs(eta) > 1.5 && abs(eta) <= 2.5) * (pt > 0.1) * sqrt(0.025^2 + pt^2*3.5e-4^2)}
 }
 
 ##############
@@ -502,7 +485,7 @@ module Isolation ElectronIsolation {
 #################
 
 module Efficiency MuonEfficiency {
-  set InputArray MuonMomentumSmearing/muons
+  set InputArray ParticlePropagator/muons
   set OutputArray muons
 
   # single muon efficiency as a function of pt and |eta|
