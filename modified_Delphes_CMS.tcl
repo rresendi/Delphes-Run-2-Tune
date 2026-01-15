@@ -158,7 +158,6 @@ module Merger TrackMerger {
 # add InputArray InputArray
   add InputArray ChargedHadronMomentumSmearing/chargedHadrons
   add InputArray ElectronMomentumSmearing/electrons
-  add InputArray MuonMomentumSmearing/muons
   set OutputArray tracks
 }
 
