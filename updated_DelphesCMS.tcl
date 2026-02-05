@@ -140,8 +140,8 @@ module Efficiency MuonTrackingEfficiency {
                                           (abs(eta) <= 0.9) * (pt > 6.0     && pt <= 7.0)      * (0.97) +
                                           (abs(eta) <= 0.9) * (pt > 7.0     && pt <= 8.0)      * (0.98) +
                                           (abs(eta) <= 0.9) * (pt > 8.0     && pt <= 10.0)     * (0.98) +
-                                          (abs(eta) <= 0.9) * (pt > 10.0    && pt <= 100.0)    * (0.00) +
-                                          (abs(eta) <= 0.9) * (pt > 100.0   && pt <= 1000.0)   * (0.00) +
+                                          (abs(eta) <= 0.9) * (pt > 10.0    && pt <= 100.0)    * (0.99) +
+                                          (abs(eta) <= 0.9) * (pt > 100.0   && pt <= 1000.0)   * (0.99) +
                                           (abs(eta) <= 0.9) * (pt > 1000.0)                    * (0.82) +
                                            
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 1.0     && pt <= 2.0)     * (0.95) +
@@ -152,8 +152,8 @@ module Efficiency MuonTrackingEfficiency {
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 6.0     && pt <= 7.0)     * (0.95) +
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 7.0     && pt <= 8.0)     * (0.94) +
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 8.0     && pt <= 10.0)    * (0.95) +
-                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 10.0    && pt <= 100.0)   * (0.00) +
-                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 100.0   && pt <= 1000.0)  * (0.00) +
+                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 10.0    && pt <= 100.0)   * (0.99) +
+                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 100.0   && pt <= 1000.0)  * (0.99) +
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 1000.0)                   * (0.77) +
 
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 1.0     && pt <= 2.0)     * (0.96) +
@@ -164,8 +164,8 @@ module Efficiency MuonTrackingEfficiency {
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 6.0     && pt <= 7.0)     * (0.97) +
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 7.0     && pt <= 8.0)     * (0.97) +
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 8.0     && pt <= 10.0)    * (0.97) +
-                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 10.0    && pt <= 100.0)   * (0.00) +
-                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 100.0   && pt <= 1000.0)  * (0.00) +
+                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 10.0    && pt <= 100.0)   * (0.99) +
+                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 100.0   && pt <= 1000.0)  * (0.99) +
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 1000.0 )                  * (0.81) +
 
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 1.0     && pt <= 2.0)     * (0.98) +
@@ -176,8 +176,8 @@ module Efficiency MuonTrackingEfficiency {
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 6.0     && pt <= 7.0)     * (0.99) +
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 7.0     && pt <= 8.0)     * (1.00) +
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 8.0     && pt <= 10.0)    * (1.00) +
-                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 10.0    && pt <= 100.0)   * (0.00) +
-                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 100.0   && pt <= 1000.0)  * (0.00) +
+                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 10.0    && pt <= 100.0)   * (0.99) +
+                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 100.0   && pt <= 1000.0)  * (0.99) +
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 1000.0)                   * (0.48) +
 
                          (abs(eta) > 2.5)                                                  * (0.00)}
@@ -584,8 +584,8 @@ module Efficiency MuonEfficiency {
                                           (abs(eta) <= 0.9) * (pt > 6.0     && pt <= 7.0)      * (0.96) +
                                           (abs(eta) <= 0.9) * (pt > 7.0     && pt <= 8.0)      * (0.96) +
                                           (abs(eta) <= 0.9) * (pt > 8.0     && pt <= 10.0)     * (0.96) +
-                                          (abs(eta) <= 0.9) * (pt > 10.0    && pt <= 100.0)    * (0.00) +
-                                          (abs(eta) <= 0.9) * (pt > 100.0   && pt <= 1000.0)   * (0.00) +
+                                          (abs(eta) <= 0.9) * (pt > 10.0    && pt <= 100.0)    * (0.97) +
+                                          (abs(eta) <= 0.9) * (pt > 100.0   && pt <= 1000.0)   * (0.98) +
                                           (abs(eta) <= 0.9) * (pt > 1000.0)                    * (0.95) +
                                            
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 1.0     && pt <= 2.0)     * (0.00) +
@@ -596,8 +596,8 @@ module Efficiency MuonEfficiency {
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 6.0     && pt <= 7.0)     * (0.95) +
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 7.0     && pt <= 8.0)     * (0.95) +
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 8.0     && pt <= 10.0)    * (0.96) +
-                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 10.0    && pt <= 100.0)   * (0.00) +
-                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 100.0   && pt <= 1000.0)  * (0.00) +
+                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 10.0    && pt <= 100.0)   * (0.98) +
+                         (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 100.0   && pt <= 1000.0)  * (0.98) +
                          (abs(eta) > 0.9 && abs(eta) <= 1.2) * (pt > 1000.0)                   * (0.95) +
 
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 1.0     && pt <= 2.0)     * (0.07) +
@@ -608,8 +608,8 @@ module Efficiency MuonEfficiency {
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 6.0     && pt <= 7.0)     * (0.97) +
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 7.0     && pt <= 8.0)     * (0.98) +
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 8.0     && pt <= 10.0)    * (0.97) +
-                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 10.0    && pt <= 100.0)   * (0.00) +
-                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 100.0   && pt <= 1000.0)  * (0.00) +
+                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 10.0    && pt <= 100.0)   * (0.99) +
+                         (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 100.0   && pt <= 1000.0)  * (0.99) +
                          (abs(eta) > 1.2 && abs(eta) <= 2.1) * (pt > 1000.0 )                  * (0.97) +
 
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 1.0     && pt <= 2.0)     * (0.37) +
@@ -620,8 +620,8 @@ module Efficiency MuonEfficiency {
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 6.0     && pt <= 7.0)     * (0.96) +
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 7.0     && pt <= 8.0)     * (0.96) +
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 8.0     && pt <= 10.0)    * (0.97) +
-                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 10.0    && pt <= 100.0)   * (0.00) +
-                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 100.0   && pt <= 1000.0)  * (0.00) +
+                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 10.0    && pt <= 100.0)   * (0.97) +
+                         (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 100.0   && pt <= 1000.0)  * (0.97) +
                          (abs(eta) > 2.1 && abs(eta) <= 2.4) * (pt > 1000.0)                   * (0.95) +
 
                          (abs(eta) > 2.5)                                                  * (0.00)}
