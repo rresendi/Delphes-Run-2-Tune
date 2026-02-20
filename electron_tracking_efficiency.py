@@ -62,26 +62,42 @@ def best_pair(gen, samp, m0):
                 best = (a, b)
     return best
 
-def match_gsftrack(g, trk_pt, trk_eta, trk_phi, dr_max=0.05, relpt_max=0.3):
-    gpt, geta, gphi = float(g["pt"]), float(g["eta"]), float(g["phi"])
-    if gpt <= 0:
-        return None
-    best, best_key = None, (1e9, 1e9)
-    n = min(len(trk_pt), len(trk_eta), len(trk_phi))
+# Gen to PF matching
+def match_pftrack(g, trk_eta, trk_phi, dr_max=0.1):
+    geta, gphi = float(g["eta"]), float(g["phi"])
+    best = None
+    best_dr = 1e9
+    n = min(len(trk_eta), len(trk_phi))
     for i in range(n):
-        pt, eta, phi = float(trk_pt[i]), float(trk_eta[i]), float(trk_phi[i])
+        eta = float(trk_eta[i])
+        phi = float(trk_phi[i])
+
+        # crack veto
         if 1.444 < abs(eta) < 1.566:
             continue
+
         dr = dR(geta, gphi, eta, phi)
         if dr >= dr_max:
             continue
-        relpt = abs(pt - gpt) / gpt
-        if relpt >= relpt_max:
+        if dr < best_dr:
+            best_dr = dr
+            best = {"eta": eta, "phi": phi, "dr": dr, "i": i}
+    return best
+
+# (passing) Gen to Reco matching
+def match_reco(g, reco_list, used_reco_idx, dr_max=0.1):
+    geta, gphi = float(g["eta"]), float(g["phi"])
+    best = None
+    best_dr = 1e9
+    for r in reco_list:
+        if r["i"] in used_reco_idx:
             continue
-        key = (dr, relpt)
-        if key < best_key:
-            best_key = key
-            best = {"pt": pt, "eta": eta, "phi": phi, "dr": dr, "relpt": relpt}
+        dr = dR(geta, gphi, float(r["eta"]), float(r["phi"]))
+        if dr >= dr_max:
+            continue
+        if dr < best_dr:
+            best_dr = dr
+            best = r
     return best
 
 def write_eff_csv(path, eta_edges, pt_bins, tot, hit):
@@ -101,16 +117,14 @@ def write_eff_csv(path, eta_edges, pt_bins, tot, hit):
                 ])
 
 def main():
-    
-    samp = sys.argv[1] # jpsi, dy, or zprime
+
+    samp = sys.argv[1]  # jpsi, dy, or zprime
     files = []
     for p in sys.argv[2:]:
         files += files_from(p)
 
-    # Same eta binning across samples
     eta_edges = [0.0, 0.8, 1.444, 1.98, 2.5]
-    
-    # Sample dependent pT bins and resonance masses
+
     if samp == "jpsi":
         pt_edges, m0, pt_sel = [1, 2, 3, 4, 5, 6, 7, 8, 10], 3.0969, (1.0, 10.0)
     elif samp == "dy":
@@ -118,27 +132,31 @@ def main():
     else:
         pt_edges, m0, pt_sel = [1000.0, 3000.0], 5000.0, (1000.0, 3000.0)
 
-    # Make a list of bins
     pt_bins = list(zip(pt_edges[:-1], pt_edges[1:]))
     n_eta, n_pt = len(eta_edges) - 1, len(pt_bins)
 
-    # Store track efficiency info
     tot1 = [[0] * n_pt for _ in range(n_eta)]
     hit1 = [[0] * n_pt for _ in range(n_eta)]
     res_rows = []
 
-    # Store reco efficiency info
     tot2 = [[0] * n_pt for _ in range(n_eta)]
     hit2 = [[0] * n_pt for _ in range(n_eta)]
     mass_rows = []
+
+    # matching thresholds
+    DR_PF = 0.1
+    DR_RECO = 0.1
 
     for iz, fpath in enumerate(files):
         print(f"[{iz + 1}/{len(files)}] {fpath}")
         tf = ROOT.TFile.Open(fpath)
         t = tf.Get("Events")
+        if not t:
+            tf.Close()
+            continue
 
         for ev in t:
-            # Build gen Electron collection
+            # Build gen collection
             gp_pdg = getattr(ev, "GenPart_pdgId", None)
             gp_pt  = getattr(ev, "GenPart_pt", None)
             gp_eta = getattr(ev, "GenPart_eta", None)
@@ -156,7 +174,7 @@ def main():
                 if int(gp_st[i]) != 1:
                     continue
                 eta = float(gp_eta[i])
-                if abs(eta) >= 1.444 and abs(eta) <= 1.566:
+                if 1.444 <= abs(eta) <= 1.566:
                     continue
                 if abs(eta) >= 2.5:
                     continue
@@ -168,97 +186,103 @@ def main():
             if len(gen) < 2:
                 continue
 
-            # Sort by pT and find pair closest to resonance mass
             gen.sort(key=lambda x: x["pt"], reverse=True)
             pair = best_pair(gen, samp, m0)
             if not pair:
                 continue
             pair = [pair[0], pair[1]]
 
-            # Use PF Cands track info only
-            trk_eta = getattr(ev, "GsfTracks_eta", None)
-            trk_phi = getattr(ev, "GsfTracks_phi", None)
-            trk_pt  = getattr(ev, "GsfTracks_pt", None)
-            if any(x is None for x in (trk_eta, trk_phi, trk_pt)):
-                continue
-            
-            nGsf = len(trk_pt)
-            if nGsf == 0:
-                print("Event has ZERO GsfTracks!")
+            # Build PF track collection
+            pf_trkEta = getattr(ev, "PFCands_trkEta", None)
+            pf_trkPhi = getattr(ev, "PFCands_trkPhi", None)
+            pf_trkPt  = getattr(ev, "PFCands_trkPt", None)
+            pf_pdgId  = getattr(ev, "PFCands_pdgId", None)
 
-            # Grab reco Electron branches
+            if any(x is None for x in (pf_trkEta, pf_trkPhi, pf_trkPt, pf_pdgId)):
+                continue
+
+            nPF = min(len(pf_trkEta), len(pf_trkPhi), len(pf_trkPt), len(pf_pdgId))
+            if nPF == 0:
+                continue
+
+            # Veto PF muons
+            has_pf_muon = False
+            for i in range(nPF):
+                if abs(int(pf_pdgId[i])) == 13:
+                    has_pf_muon = True
+                    break
+            if has_pf_muon:
+                continue
+
+            # Build reco electron collection
             nEle = int(getattr(ev, "nElectron", 0))
             ele_pt   = getattr(ev, "Electron_pt", None)
             ele_eta  = getattr(ev, "Electron_eta", None)
             ele_phi  = getattr(ev, "Electron_phi", None)
             ele_m    = getattr(ev, "Electron_mass", None)
             ele_med  = getattr(ev, "Electron_cutBased", None)
-            ele_gidx = getattr(ev, "Electron_genPartIdx", None)
-            
-            # Create a map and apply reco Electron object sels
-            reco_by_gen = {}
-            if not any(x is None for x in (ele_pt, ele_eta, ele_phi, ele_m, ele_med, ele_gidx)):
+
+            reco_selected = []
+            if not any(x is None for x in (ele_pt, ele_eta, ele_phi, ele_m, ele_med)):
                 for i in range(nEle):
-                    gidx = int(ele_gidx[i]) if i < len(ele_gidx) else -1
-                    if gidx < 0:
-                        continue
-                    eta = ele_eta[i]
+                    eta = float(ele_eta[i])
                     if 1.444 <= abs(eta) <= 1.566:
                         continue
                     if abs(eta) >= 2.5:
                         continue
-                    # if ele_med[i] < 3:
+                    # turn id on/off
+                    # if int(ele_med[i]) < 3:
                     #     continue
-                    prev = reco_by_gen.get(gidx)
-                    if (prev is None) or (float(ele_pt[i]) > prev["pt"]):
-                        reco_by_gen[gidx] = {"pt": float(ele_pt[i]), "eta": float(ele_eta[i]), "phi": float(ele_phi[i]), "m": float(ele_m[i])}
+                    reco_selected.append({"i": i, "pt": float(ele_pt[i]), "eta": eta, "phi": float(ele_phi[i]), "m": float(ele_m[i])})
 
-            # Compute track efficiency
+            # Calculate first efficiency
             passed1 = {}
             for g in pair:
-                # Grab pT and eta bins of the. Electron pair
                 ie = find_bin(abs(g["eta"]), eta_edges)
                 ip = next((j for j, (plo, phi) in enumerate(pt_bins) if plo <= g["pt"] < phi), None)
                 if ie is None or ip is None:
                     continue
 
-                # Add them to the denominator and find a PF Cand match
                 tot1[ie][ip] += 1
-                m = match_gsftrack(g, trk_pt, trk_eta, trk_phi, dr_max=0.1, relpt_max=0.3)
+
+                m = match_pftrack(g, pf_trkEta, pf_trkPhi, dr_max=DR_PF)
                 if not m:
                     continue
 
-                # Add to numerator if successful
                 hit1[ie][ip] += 1
                 passed1[int(g["idx"])] = (ie, ip)
 
-                # Write kin info
+                # write info for momentum resolution csv
+                ti = int(m["i"])
                 res_rows.append({
-                    "pf_pt": m["pt"],
+                    "pf_pt": float(pf_trkPt[ti]),
                     "gen_pt": float(g["pt"]),
-                    "pf_eta": m["eta"],
+                    "pf_eta": float(pf_trkEta[ti]),
                     "gen_eta": float(g["eta"]),
-                    "resolution": (m["pt"] - float(g["pt"])) / float(g["pt"]),
+                    "resolution": (float(pf_trkPt[ti]) - float(g["pt"])) / float(g["pt"]) if float(g["pt"]) > 0 else float("nan"),
                 })
 
-            # Compute reco efficiency
+            # Calculate reco efficiency using passing gen objs from track eff
             reco_legs = []
+            used_reco_idx = set()
+
             for g in pair:
                 gidx = int(g["idx"])
-                # Skip Electrons that failed the track efficiency
                 if gidx not in passed1:
                     continue
+
                 ie, ip = passed1[gidx]
-
-                # Add to denominator and do GenPartIdx matching
                 tot2[ie][ip] += 1
-                r = reco_by_gen.get(gidx)
-                if r is None:
-                    continue
-                hit2[ie][ip] += 1
-                reco_legs.append(r)
 
-            # If both Electrons in event pass, compute diElectron reco mass
+                best_reco = match_reco(g, reco_selected, used_reco_idx, dr_max=DR_RECO)
+                if best_reco is None:
+                    continue
+
+                hit2[ie][ip] += 1
+                used_reco_idx.add(best_reco["i"])
+                reco_legs.append(best_reco)
+
+            # Calculate inv. mass if both efficiencies are passed
             if len(passed1) == 2 and len(reco_legs) == 2:
                 reco_legs.sort(key=lambda x: x["pt"], reverse=True)
                 p1 = ROOT.TLorentzVector(); p1.SetPtEtaPhiM(reco_legs[0]["pt"], reco_legs[0]["eta"], reco_legs[0]["phi"], reco_legs[0]["m"])
@@ -275,13 +299,13 @@ def main():
 
         tf.Close()
 
-    outbase = f"{samp}"
+    outbase = f"ele_{samp}_pftrk_pfveto"
 
-    eff1_path = f"{outbase}_track_efficiency_noid.csv"
+    eff1_path = f"{outbase}_track_efficiency_pfcands.csv"
     write_eff_csv(eff1_path, eta_edges, pt_bins, tot1, hit1)
     print(f"Wrote: {eff1_path}")
 
-    res_path = f"{outbase}_momentum_resolution_noid.csv"
+    res_path = f"{outbase}_momentum_resolution_pfcands.csv"
     with open(res_path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["pf_pt","gen_pt","pf_eta","gen_eta","resolution"])
@@ -289,11 +313,11 @@ def main():
             w.writerow([f"{r['pf_pt']:.6f}", f"{r['gen_pt']:.6f}", f"{r['pf_eta']:.6f}", f"{r['gen_eta']:.6f}", f"{r['resolution']:.6f}"])
     print(f"Wrote: {res_path}")
 
-    eff2_path = f"{outbase}_reconstruction_efficiency_noid.csv"
+    eff2_path = f"{outbase}_reconstruction_efficiency_pfcands.csv"
     write_eff_csv(eff2_path, eta_edges, pt_bins, tot2, hit2)
     print(f"Wrote: {eff2_path}")
 
-    mass_path = f"{outbase}_reco_mass_noid.csv"
+    mass_path = f"{outbase}_reco_mass_pfcands.csv"
     with open(mass_path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["mass","lead_pt","lead_eta","lead_phi","sub_pt","sub_eta","sub_phi"])
