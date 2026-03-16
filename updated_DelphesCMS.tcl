@@ -228,11 +228,47 @@ module MomentumSmearing MuonMomentumSmearing {
   # set ResolutionFormula {resolution formula as a function of eta and pt}
 
   # resolution formula for muons
-  set ResolutionFormula {                  (abs(eta) <= 0.5) * (pt > 0.1) * sqrt(0.01^2 + pt^2*1.0e-4^2) +
-                         (abs(eta) > 0.5 && abs(eta) <= 1.5) * (pt > 0.1) * sqrt(0.015^2 + pt^2*1.5e-4^2) +
-                         (abs(eta) > 1.5 && abs(eta) <= 2.5) * (pt > 0.1) * sqrt(0.025^2 + pt^2*3.5e-4^2)}
-}
-
+  set ResolutionFormula {
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 1.0    && pt < 4.0)    * 0.011703 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 4.0    && pt < 5.0)    * 0.010945 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 5.0    && pt < 6.0)    * 0.011129 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 6.0    && pt < 7.0)    * 0.010458 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 7.0    && pt < 8.0)    * 0.009060 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 8.0    && pt < 10.0)   * 0.010028 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 10.0   && pt < 100.0)  * 0.012502 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 100.0  && pt < 1000.0) * 0.021502 +
+                            (abs(eta) >= 0.0 && abs(eta) < 0.9) * (pt >= 1000.0 && pt < 3000.0) * 0.142807 +
+                          
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 1.0    && pt < 4.0)    * 0.017853 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 4.0    && pt < 5.0)    * 0.015734 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 5.0    && pt < 6.0)    * 0.015834 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 6.0    && pt < 7.0)    * 0.015243 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 7.0    && pt < 8.0)    * 0.016084 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 8.0    && pt < 10.0)   * 0.017765 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 10.0   && pt < 100.0)  * 0.019352 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 100.0  && pt < 1000.0) * 0.030327 +
+                            (abs(eta) >= 0.9 && abs(eta) < 1.2) * (pt >= 1000.0 && pt < 3000.0) * 0.147789 +
+                          
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 1.0    && pt < 4.0)    * 0.020374 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 4.0    && pt < 5.0)    * 0.018418 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 5.0    && pt < 6.0)    * 0.018905 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 6.0    && pt < 7.0)    * 0.017464 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 7.0    && pt < 8.0)    * 0.019454 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 8.0    && pt < 10.0)   * 0.019842 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 10.0   && pt < 100.0)  * 0.023430 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 100.0  && pt < 1000.0) * 0.037410 +
+                            (abs(eta) >= 1.2 && abs(eta) < 2.1) * (pt >= 1000.0 && pt < 3000.0) * 0.145291 +
+                          
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 1.0    && pt < 4.0)    * 0.028367 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 4.0    && pt < 5.0)    * 0.028885 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 5.0    && pt < 6.0)    * 0.028884 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 6.0    && pt < 7.0)    * 0.030210 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 7.0    && pt < 8.0)    * 0.027584 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 8.0    && pt < 10.0)   * 0.033202 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 10.0   && pt < 100.0)  * 0.040863 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 100.0  && pt < 1000.0) * 0.084050 +
+                            (abs(eta) >= 2.1 && abs(eta) < 2.4) * (pt >= 1000.0 && pt < 3000.0) * 0.157529
+    }
 ##############
 # Track merger
 ##############
